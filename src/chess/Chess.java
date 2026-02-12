@@ -20,11 +20,26 @@ public class Chess {
 	 */
 	public static ReturnPlay play(String move) {
 		
-		// not final, just placeholder to display the board
+		// NOT FINAL, TESTING PIECE MOVEMENT
 		ReturnPlay rpl = new ReturnPlay();
-		rpl.message = null;
+		
+		move = move.trim();
+		String currPos = move.substring(0, 2);
+		String nextPos = move.substring(3);
+
+		for(ReturnPiece rp : board) {
+			if(currPos.equals(rp.toString().substring(0, 2))) {
+				rp.pieceFile = ReturnPiece.PieceFile.valueOf(nextPos.substring(0, 1));
+				rp.pieceRank = Integer.parseInt(nextPos.substring(1));
+				break;
+			}
+		}
+
 		rpl.piecesOnBoard = board;
+		rpl.message = null;
+
 		return rpl;
+
 	}
 	
 	
