@@ -6,8 +6,10 @@ Game session:
 
 Classes:
 - supplied:
-    - ReturnPiece: contains pieceFile, pieceRank, pieceType, toString(), and equals()
-    - ReturnPlay: contains piecesOnBoard and message
+    - Chess: controls the game, contains enum Player, play(), start(), and any added methods or structures
+    - PlayChess: driver class, contains main(), printBoard(), makeBlankBoard(), printPiecesOnBoard()
+    - ReturnPiece (DO NOT MODIFY/SUBMIT): contains pieceFile, pieceRank, pieceType, toString(), and equals()
+    - ReturnPlay (DO NOT MODIFY/SUBMIT): contains piecesOnBoard and message
 - to be added:
     - PawnPiece
     - RookPiece
@@ -37,6 +39,6 @@ Chess.play() (in progress):
     - check if move is legal for that piece, and determine move type (move, capture, special move)
     - perform move: update piece position, remove any captured pieces from the board ArrayList
     - return ReturnPlay (may return earlier if illegal move or resign)
-    
+
 
 IDEAS/COMMENTS:
