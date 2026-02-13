@@ -7,7 +7,7 @@ Game session:
 Classes:
 - supplied:
     - Chess: controls the game, contains enum Player, play(), start(), and any added methods or structures
-    - PlayChess: driver class, contains main(), printBoard(), makeBlankBoard(), printPiecesOnBoard()
+    - PlayChess (DO NOT SUBMIT): driver class, contains main(), printBoard(), makeBlankBoard(), printPiecesOnBoard()
     - ReturnPiece (DO NOT MODIFY/SUBMIT): contains pieceFile, pieceRank, pieceType, toString(), and equals()
     - ReturnPlay (DO NOT MODIFY/SUBMIT): contains piecesOnBoard and message
 - to be added:
