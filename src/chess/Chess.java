@@ -57,7 +57,7 @@ public class Chess {
 		move = move.trim();
 
 		if(move.equals("resign")) {
-			return (player == Player.white) ? returnPlay(Message.RESIGN_WHITE_WINS) : returnPlay(Message.RESIGN_BLACK_WINS);
+			return (player == Player.white) ? returnPlay(Message.RESIGN_BLACK_WINS) : returnPlay(Message.RESIGN_WHITE_WINS);
 		}
 
 		char currFile = move.substring(0,1).charAt(0);
