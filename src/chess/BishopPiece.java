@@ -1,14 +1,13 @@
 package chess;
 
 import java.util.*;
+import chess.Chess.MoveType;
 
 public class BishopPiece extends ReturnPiece {
 
-    // MOVE - diagonal any # of squares
-    // CAP - move to enemy position
-    static enum MoveType {MOVE, CAP};
-
-    public MoveType checkMove(ReturnPiece.PieceFile f, int r) {
+    // BMOVE - diagonal any # of squares
+    // BCAP - move to enemy position
+    public MoveType checkMove(char nextFile, int nextRank) {
 
         // placeholder
         return null;

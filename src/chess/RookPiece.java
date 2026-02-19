@@ -1,14 +1,15 @@
 package chess;
 
 import java.util.*;
+import chess.Chess.MoveType;
 
 public class RookPiece extends ReturnPiece {
 
+    boolean hasMoved = false;
+
     // MOVE - standard move any # of square horizontally or vertically
     // CAP - move to an enemy position
-    static enum MoveType {MOVE, CAP};
-
-    public MoveType checkMove(ReturnPiece.PieceFile f, int r) {
+    public MoveType checkMove(char nextFile, int nextRank) {
 
         // placeholder
         return null;
