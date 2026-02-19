@@ -1,7 +1,8 @@
 DESIGN PLAN:
 
 Game session:
-- manage board with ArrayList of polymorphic ReturnPiece objects 
+- manage board with 2D array of polymorphic ReturnPiece objects
+- keep ArrayList of pieces for ReturnPlay
 - track current player with Player object (supplied to us as enum)
 - track special moves (en passant, etc.)
 
@@ -11,37 +12,41 @@ Classes:
     - PlayChess (DO NOT SUBMIT): driver class, contains main(), printBoard(), makeBlankBoard(), printPiecesOnBoard()
     - ReturnPiece (DO NOT MODIFY/SUBMIT): contains pieceFile, pieceRank, pieceType, toString(), and equals()
     - ReturnPlay (DO NOT MODIFY/SUBMIT): contains piecesOnBoard and message
-- to be added:
+- added:
     - PawnPiece
     - RookPiece
     - KnightPiece
     - BishopPiece
     - QueenPiece
     - KingPiece
-    - Each piece will extend ReturnPiece and have the following:
-        - static enum MoveType (will contain corresponding moves for that piece)
+    - Each piece will extend ReturnPiece and have:
         - checkMove() (will check if the requested move is legal, and if yes then return MoveType value)
+    - RookPiece and KingPiece will also have hasMoved() boolean for castling
 
 start():
 - Chess class
 - set starting player to white
-- clear the board ArrayList
-- Nested loop; outer loop iterates 4 times for each starting rank; inner loop iterates through all enum values for the starting files
-- call addPiece function for each position
+- clear board and boardList
+- Nested loop to add pieces to board and boardList with addPiece()
 
 addPiece():
 - Chess class
 - takes int and PieceFile from the loop as arguments
-- use switch case to determine correct pieceType, pieceFile, and pieceRank for new ReturnPiece (polymorphic); add it to board ArrayList
+- switch case to determine correct pieceType, pieceFile, and pieceRank for new ReturnPiece (polymorphic)
+- return the new ReturnPiece
 
 play() (in progress):
 - Chess class
 - we can assume move will be properly formatted aside from leading or trailing whitespace, which can be removed with trim()
-- potential flow for each play:
-    - check for special move format (castling, promotion, etc.)
-    - check if move is legal for that piece, and determine move type (move, capture, special move)
-    - perform move: update piece position, remove any captured pieces from the board ArrayList
-    - return ReturnPlay (may return earlier if illegal move or resign)
+- flow for each play:
+    -> check for resign
+    -> extract current and next position values
+    -> check if piece exists
+    -> check if appropriate color
+    -> set respective fields for special formats
+    -> determine what move type is being made
+    -> if not illegal, attempt to execute the move
+    -> return the resulting ReturnPlay of the execution
 
 checkMove() (in progress):
 - one for each ReturnPiece subclass
@@ -70,15 +75,27 @@ checkMove() (in progress):
         - target rank is 1 or 8 depending on color
         - promotion piece is specified
 - RookPiece:
-    - 
+    - to be added
 - KnightPiece:
-    - 
+    - to be added
 - BishopPiece:
-    - 
+    - to be added
 - QueenPiece:
-    - 
+    - to be added
 - KingPiece:
-    - 
+    - to be added
+
+execMove() (in progress): 
+- Chess class
+- determine if move will result in self check/checkmate
+- if legal, modify board and boardList
+- determine if other player is in check/checkmate
+
+returnPlay():
+- returns a new ReturnPlay object with the boardList and given Message
+
+isWhite()/isBlack():
+- check if given piece is the respective color
 
 
 IDEAS/COMMENTS:

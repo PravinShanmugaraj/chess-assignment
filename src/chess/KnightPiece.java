@@ -1,15 +1,14 @@
 package chess;
 
 import java.util.*;
+import chess.Chess.MoveType;
 
 public class KnightPiece extends ReturnPiece {
 
-    // MOVE - L shape in any direction
-    // CAP - move to enemy position
+    // NMOVE - L shape in any direction
+    // NCAP - move to enemy position
     // (can jump over any piece)
-    static enum MoveType {MOVE, CAP};
-
-    public MoveType checkMove(ReturnPiece.PieceFile f, int r) {
+    public MoveType checkMove(char nextFile, int nextRank) {
 
         // placeholder
         return null;
