@@ -13,7 +13,7 @@ public class PawnPiece extends ReturnPiece {
     public MoveType checkMove(char nextFile, int nextRank, String prmPiece) {
 
         // placeholder
-        return null;
+        return MoveType.MOVE;
     }
 
 }
