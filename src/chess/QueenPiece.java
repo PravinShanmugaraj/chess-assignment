@@ -1,7 +1,7 @@
 package chess;
 
-import java.util.*;
 import chess.Chess.MoveType;
+
 import static chess.BishopPiece.checkDiagonal;
 import static chess.RookPiece.checkStraight;
 

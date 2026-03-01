@@ -1,7 +1,11 @@
 package chess;
 
-import java.util.*;
 import chess.Chess.MoveType;
+
+import static chess.Chess.getPiece;
+import static chess.Chess.isWhite;
+import static chess.Chess.isBlack;
+import static chess.Chess.player;
 
 public class KingPiece extends ReturnPiece {
 
@@ -16,8 +20,9 @@ public class KingPiece extends ReturnPiece {
         // e.g: king moves e1 to g1, rook moves h1 to f1
     public MoveType checkMove(char nextFile, int nextRank) {
 
-        RookPiece leftRook = (Chess.getPiece('a', 1) instanceof RookPiece) ? (RookPiece) Chess.getPiece('a', 1) : null;
-        RookPiece rightRook = (Chess.getPiece('h', 1) instanceof RookPiece) ? (RookPiece) Chess.getPiece('h', 1) : null;
+        // castling rooks
+        RookPiece leftRook = (getPiece('a', 1) instanceof RookPiece) ? (RookPiece) getPiece('a', 1) : null;
+        RookPiece rightRook = (getPiece('h', 1) instanceof RookPiece) ? (RookPiece) getPiece('h', 1) : null;
 
         char file = pieceFile.name().charAt(0);
 
@@ -30,46 +35,38 @@ public class KingPiece extends ReturnPiece {
         int deltaRank = nextRank - pieceRank;
         MoveType castle = null;
 
+        // castling check
         if(hasMoved == false && nextRank == pieceRank && Math.abs(deltaFile) == 2) {
-            System.out.println("king available");
             switch(deltaFile) {
                 case 2 -> {
-                    System.out.println("moving right");
                     if(rightRook != null && rightRook.hasMoved == false) {
-                        System.out.println("right rook available");
                         char checkFile = (char) (file + 1);
 
-                        while(Chess.getPiece(checkFile, pieceRank) != rightRook) {
-                            if(Chess.getPiece(checkFile, pieceRank) != null) {
-                                System.out.println("line of sight blocked");
+                        while(getPiece(checkFile, pieceRank) != rightRook) {
+                            if(getPiece(checkFile, pieceRank) != null) {
                                 break;
                             }
                             checkFile++;
                         }
 
-                        if(Chess.getPiece(checkFile, pieceRank) == rightRook) {
+                        if(getPiece(checkFile, pieceRank) == rightRook) {
                             castle = MoveType.CAST_KSIDE;
-                            System.out.println("castle available");
                         }
                     }
                 }
                 case -2 -> {
-                    System.out.println("moving left");
                     if(leftRook != null && leftRook.hasMoved == false) {
-                        System.out.println("left rook available");
                         char checkFile = (char) (file - 1);
 
-                        while(Chess.getPiece(checkFile, pieceRank) != leftRook) {
-                            if(Chess.getPiece(checkFile, pieceRank) != null) {
-                                System.out.println("line of sight blocked");
+                        while(getPiece(checkFile, pieceRank) != leftRook) {
+                            if(getPiece(checkFile, pieceRank) != null) {
                                 break;
                             }
                             checkFile--;
                         }
 
-                        if(Chess.getPiece(checkFile, pieceRank) == leftRook) {
+                        if(getPiece(checkFile, pieceRank) == leftRook) {
                             castle = MoveType.CAST_QSIDE;
-                            System.out.println("castle available");
                         }
                     }
                 }
@@ -85,18 +82,18 @@ public class KingPiece extends ReturnPiece {
         }
 
         // if target spot is empty its a MOVE
-        if(Chess.getPiece(nextFile, nextRank) == null) {
+        if(getPiece(nextFile, nextRank) == null) {
             return MoveType.MOVE;
         }
 
         // if target spot is enemy piece it is a CAP
         // if friendly piece it is illegal
-        switch(Chess.player) {
+        switch(player) {
             case white -> {
-                return (Chess.isBlack(Chess.getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
+                return (isBlack(getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
             }
             case black -> {
-                return (Chess.isWhite(Chess.getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
+                return (isWhite(getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
             }
         }
 

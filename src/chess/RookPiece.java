@@ -1,7 +1,11 @@
 package chess;
 
-import java.util.*;
 import chess.Chess.MoveType;
+
+import static chess.Chess.getPiece;
+import static chess.Chess.isWhite;
+import static chess.Chess.isBlack;
+import static chess.Chess.player;
 
 public class RookPiece extends ReturnPiece {
 
@@ -36,7 +40,7 @@ public class RookPiece extends ReturnPiece {
                 int checkRank = rank + 1;
 
                 while(checkRank != nextRank) {
-                    if(Chess.getPiece(file, checkRank) != null) {
+                    if(getPiece(file, checkRank) != null) {
                         return MoveType.NONE;
                     }
                     checkRank++;
@@ -45,7 +49,7 @@ public class RookPiece extends ReturnPiece {
                 int checkRank = rank - 1;
 
                 while(checkRank != nextRank) {
-                    if(Chess.getPiece(file, checkRank) != null) {
+                    if(getPiece(file, checkRank) != null) {
                         return MoveType.NONE;
                     }
                     checkRank--;
@@ -56,7 +60,7 @@ public class RookPiece extends ReturnPiece {
                 char checkFile = (char) (file + 1);
 
                 while(checkFile != nextFile) {
-                    if(Chess.getPiece(checkFile, rank) != null) {
+                    if(getPiece(checkFile, rank) != null) {
                         return MoveType.NONE;
                     }
                     checkFile++;
@@ -65,7 +69,7 @@ public class RookPiece extends ReturnPiece {
                 char checkFile = (char) (file - 1);
 
                 while(checkFile != nextFile) {
-                    if(Chess.getPiece(checkFile, rank) != null) {
+                    if(getPiece(checkFile, rank) != null) {
                         return MoveType.NONE;
                     }
                     checkFile--;
@@ -74,18 +78,18 @@ public class RookPiece extends ReturnPiece {
         }
 
         // if target spot is empty its a MOVE
-        if(Chess.getPiece(nextFile, nextRank) == null) {
+        if(getPiece(nextFile, nextRank) == null) {
             return MoveType.MOVE;
         }
 
         // if target spot is enemy piece it is a CAP
         // if friendly piece it is illegal
-        switch(Chess.player) {
+        switch(player) {
             case white -> {
-                return (Chess.isBlack(Chess.getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
+                return (isBlack(getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
             }
             case black -> {
-                return (Chess.isWhite(Chess.getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
+                return (isWhite(getPiece(nextFile, nextRank))) ? MoveType.CAP : MoveType.NONE;
             }
         }
 
