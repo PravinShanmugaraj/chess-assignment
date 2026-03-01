@@ -302,9 +302,230 @@ public class Chess {
 
 	// determine if given king is under attack
 	private static Message underAttack(KingPiece currKing) {
-		
-		// placeholder
-		return null;
+
+		// checking if king null, call if king in check, if king attacked, then also calls checkmate
+		if(currKing == null) {
+			return null;
+		}
+
+		if(!isKingInCheck(currKing)) {
+			return null;
+		}
+
+		if(isCheckmate(currKing)) {
+			return isWhite(currKing) ? Message.CHECKMATE_BLACK_WINS : Message.CHECKMATE_WHITE_WINS;
+		}
+
+		return Message.CHECK;
+	}
+
+	private static boolean isKingInCheck(KingPiece currKing) {
+		// get king color, file, rank
+		Player kingColor = isWhite(currKing) ? Player.white : Player.black;
+		char kingFile = currKing.pieceFile.name().charAt(0);
+		int kingRank = currKing.pieceRank;
+
+
+		// iterate every enenrmy peice and calls canCaptureSquare to see if king is at risk
+		for(ReturnPiece rp : boardList) {
+			if(rp == null || rp == currKing) {
+				continue;
+			}
+
+			boolean enemy = (kingColor == Player.white) ? isBlack(rp) : isWhite(rp);
+			if(enemy && canCaptureSquare(rp, kingFile, kingRank)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static boolean isCheckmate(KingPiece checkedKing) {
+		// this whole snapshot basically checks if king is in check, 
+		Player checkedSide = isWhite(checkedKing) ? Player.white : Player.black;
+		Player savedPlayer = player;
+
+		try {
+			player = checkedSide;
+			boolean currentlyInCheck = isKingInCheck(checkedKing);
+			ArrayList<ReturnPiece> snapshot = new ArrayList<ReturnPiece>(boardList);
+
+			for(ReturnPiece piece : snapshot) {
+				if(piece == null) {
+					continue;
+				}
+				if(checkedSide == Player.white && !isWhite(piece)) {
+					continue;
+				}
+				if(checkedSide == Player.black && !isBlack(piece)) {
+					continue;
+				}
+
+				for(char f = 'a'; f <= 'h'; f++) {
+					for(int r = 1; r <= 8; r++) {
+						MoveType mt = getMoveTypeForPiece(piece, f, r);
+						if(mt == MoveType.NONE) {
+							continue;
+						}
+
+						// cannot castle as an escape while already in check
+						if(currentlyInCheck && (mt == MoveType.CAST_KSIDE || mt == MoveType.CAST_QSIDE)) {
+							continue;
+						}
+
+						if(moveResolvesCheck(piece, mt, f, r, checkedKing, checkedSide)) {
+							return false;
+						}
+					}
+				}
+			}
+
+			return true;
+		} finally {
+			player = savedPlayer;
+		}
+	}
+
+	private static MoveType getMoveTypeForPiece(ReturnPiece piece, char nextFile, int nextRank) {
+		if(piece instanceof PawnPiece) {
+			return ((PawnPiece) piece).checkMove(nextFile, nextRank, null);
+		}
+		if(piece instanceof RookPiece) {
+			return ((RookPiece) piece).checkMove(nextFile, nextRank);
+		}
+		if(piece instanceof KnightPiece) {
+			return ((KnightPiece) piece).checkMove(nextFile, nextRank);
+		}
+		if(piece instanceof BishopPiece) {
+			return ((BishopPiece) piece).checkMove(nextFile, nextRank);
+		}
+		if(piece instanceof QueenPiece) {
+			return ((QueenPiece) piece).checkMove(nextFile, nextRank);
+		}
+		if(piece instanceof KingPiece) {
+			return ((KingPiece) piece).checkMove(nextFile, nextRank);
+		}
+
+		return MoveType.NONE;
+	}
+
+	private static boolean moveResolvesCheck(ReturnPiece piece, MoveType mt, char nextFile, int nextRank, KingPiece checkedKing, Player checkedSide) {
+		char prevFile = piece.pieceFile.name().charAt(0);
+		int prevRank = piece.pieceRank;
+
+		ReturnPiece captured = null;
+		char capFile = '\0';
+		int capRank = -1;
+		int capIndex = -1;
+
+		RookPiece castleRook = null;
+		char rookPrevFile = '\0';
+		int rookPrevRank = -1;
+
+		if(mt == MoveType.CAP) {
+			captured = getPiece(nextFile, nextRank);
+			if(captured != null) {
+				capFile = nextFile;
+				capRank = nextRank;
+				capIndex = boardList.indexOf(captured);
+				boardList.remove(captured);
+				board[8 - capRank][capFile - 'a'] = null;
+			}
+		} else if(mt == MoveType.EP) {
+			capFile = nextFile;
+			capRank = (checkedSide == Player.white) ? (nextRank - 1) : (nextRank + 1);
+			captured = getPiece(capFile, capRank);
+			if(captured != null) {
+				capIndex = boardList.indexOf(captured);
+				boardList.remove(captured);
+				board[8 - capRank][capFile - 'a'] = null;
+			}
+		}
+
+		board[8 - prevRank][prevFile - 'a'] = null;
+		board[8 - nextRank][nextFile - 'a'] = piece;
+		piece.pieceFile = PieceFile.valueOf(String.valueOf(nextFile));
+		piece.pieceRank = nextRank;
+
+		if(mt == MoveType.CAST_KSIDE || mt == MoveType.CAST_QSIDE) {
+			rookPrevRank = prevRank;
+			rookPrevFile = (mt == MoveType.CAST_KSIDE) ? 'h' : 'a';
+			ReturnPiece rookCandidate = getPiece(rookPrevFile, rookPrevRank);
+
+			if(rookCandidate instanceof RookPiece) {
+				castleRook = (RookPiece) rookCandidate;
+				char rookNextFile = (mt == MoveType.CAST_KSIDE) ? (char) (rookPrevFile - 2) : (char) (rookPrevFile + 3);
+				board[8 - rookPrevRank][rookPrevFile - 'a'] = null;
+				board[8 - rookPrevRank][rookNextFile - 'a'] = castleRook;
+				castleRook.pieceFile = PieceFile.valueOf(String.valueOf(rookNextFile));
+			}
+		}
+
+		KingPiece kingToCheck = (piece == checkedKing && piece instanceof KingPiece) ? (KingPiece) piece : checkedKing;
+		boolean safe = !isKingInCheck(kingToCheck);
+
+		if(castleRook != null) {
+			char rookCurrFile = castleRook.pieceFile.name().charAt(0);
+			board[8 - rookPrevRank][rookCurrFile - 'a'] = null;
+			board[8 - rookPrevRank][rookPrevFile - 'a'] = castleRook;
+			castleRook.pieceFile = PieceFile.valueOf(String.valueOf(rookPrevFile));
+		}
+
+		board[8 - nextRank][nextFile - 'a'] = null;
+		board[8 - prevRank][prevFile - 'a'] = piece;
+		piece.pieceFile = PieceFile.valueOf(String.valueOf(prevFile));
+		piece.pieceRank = prevRank;
+
+		if(captured != null) {
+			board[8 - capRank][capFile - 'a'] = captured;
+			if(capIndex >= 0 && capIndex <= boardList.size()) {
+				boardList.add(capIndex, captured);
+			} else {
+				boardList.add(captured);
+			}
+		}
+
+		return safe;
+	}
+
+	private static boolean canCaptureSquare(ReturnPiece attacker, char targetFile, int targetRank) {
+		int fromFile = attacker.pieceFile.name().charAt(0);
+		int fromRank = attacker.pieceRank;
+		int toFile = targetFile;
+		int toRank = targetRank;
+
+		int df = toFile - fromFile;
+		int dr = toRank - fromRank;
+		int adf = Math.abs(df);
+		int adr = Math.abs(dr);
+
+		return switch(attacker.pieceType) {
+			case PieceType.WP -> dr == 1 && adf == 1;
+			case PieceType.BP -> dr == -1 && adf == 1;
+			case PieceType.WN, PieceType.BN -> (adf == 2 && adr == 1) || (adf == 1 && adr == 2);
+			case PieceType.WB, PieceType.BB -> adf == adr && isClearPath(fromFile, fromRank, toFile, toRank);
+			case PieceType.WR, PieceType.BR -> (df == 0 || dr == 0) && isClearPath(fromFile, fromRank, toFile, toRank);
+			case PieceType.WQ, PieceType.BQ -> ((adf == adr) || (df == 0 || dr == 0)) && isClearPath(fromFile, fromRank, toFile, toRank);
+			case PieceType.WK, PieceType.BK -> adf <= 1 && adr <= 1 && (adf + adr > 0);
+		};
+	}
+
+	private static boolean isClearPath(int fromFile, int fromRank, int toFile, int toRank) {
+		int stepFile = Integer.compare(toFile, fromFile);
+		int stepRank = Integer.compare(toRank, fromRank);
+
+		int f = fromFile + stepFile;
+		int r = fromRank + stepRank;
+
+		while(f != toFile || r != toRank) {
+			if(getPiece((char) f, r) != null) {
+				return false;
+			}
+			f += stepFile;
+			r += stepRank;
+		}
+		return true;
 	}
 
 	// promote pawn to given piece
