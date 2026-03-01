@@ -11,7 +11,12 @@ public class Chess {
     enum Player { white, black }
 
 	// qualifications for each move are in piece subclasses
-	enum MoveType {MOVE, CAP, OPEN, EP, PROM, CAST_KSIDE, CAST_QSIDE, NONE}
+	enum MoveType {
+		MOVE, CAP,					// general moves
+		OPEN, EP, PROM,				// pawn specials
+		CAST_KSIDE, CAST_QSIDE,		// castling
+		NONE						// illegal
+	}
 
 	// current player
 	static Player player;
@@ -28,8 +33,8 @@ public class Chess {
 	static ReturnPiece whiteKing = null, blackKing = null;
 
 	// track whether an en passant is possible, and the pawn eligible for capture
-	static boolean enpass = false;
-	static PieceFile enpassFile = null;
+	static Player enpassTarget = null;
+	static char enpassFile = '\0';
 	static int enpassRank = -1;
 
 	// constants
@@ -48,6 +53,13 @@ public class Chess {
 	 */
 	public static ReturnPlay play(String move) {
 		
+		// reset enpass availability after other player's turn
+		if(enpassTarget == player) {
+			enpassTarget = null;
+			enpassFile = '\0';
+			enpassRank = -1;
+		}
+
 		boolean draw = false;
 		move = move.trim();
 
@@ -94,6 +106,10 @@ public class Chess {
 			case DRW_LENGTH -> draw = true;
 		}
 
+		if(prmPiece != null && !(currPiece instanceof PawnPiece)) {
+			return returnPlay(Message.ILLEGAL_MOVE);
+		}
+
 		// determine move type
 		MoveType toExec = switch(currPiece) {
 			case PawnPiece currPawn -> currPawn.checkMove(nextFile, nextRank, prmPiece);
@@ -118,9 +134,9 @@ public class Chess {
 			result = Message.DRAW;
 		}
 
-		// if(result != Message.ILLEGAL_MOVE) {
-		// 	player = (player == Player.white) ? Player.black : Player.white;
-		// }
+		if(result != Message.ILLEGAL_MOVE) {
+			player = (player == Player.white) ? Player.black : Player.white;
+		}
 
 		return returnPlay(result);
 
@@ -248,6 +264,7 @@ public class Chess {
 
 		// promotion
 		if(toExec == MoveType.PROM) {
+			prmPiece = (prmPiece == null) ? "Q" : prmPiece;
 			promPiece(currPiece, nextFile, nextRank, prmPiece);
 		}
 
