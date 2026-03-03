@@ -6,6 +6,10 @@ import static chess.Chess.getPiece;
 import static chess.Chess.isWhite;
 import static chess.Chess.isBlack;
 import static chess.Chess.player;
+import static chess.Chess.inBounds;
+import static chess.Chess.changeBoard;
+import static chess.Chess.revertBoard;
+import static chess.Chess.kingInCheck;
 
 public class KnightPiece extends ReturnPiece {
 
@@ -43,6 +47,55 @@ public class KnightPiece extends ReturnPiece {
 
         // should never happen
         return MoveType.NONE;
+
+    }
+
+    // simulates legal moves and determines king safety
+    public boolean hasLegalMove(KingPiece currKing) {
+
+        boolean hasMove = false;
+
+        char file = pieceFile.name().charAt(0);
+
+        for(int fileDir = -2; fileDir <= 2; fileDir++) {
+            for(int rankDir = -2; rankDir <= 2; rankDir++) {
+
+                if(Math.abs(fileDir * rankDir) != 2) {
+                    continue;
+                }
+
+                char checkFile = (char) (file + fileDir);
+                int checkRank = pieceRank + rankDir;
+
+                if(!inBounds(checkFile, checkRank)) {
+                    continue;
+                }
+
+                MoveType move = checkMove(checkFile, checkRank);
+
+                if(move != MoveType.MOVE && move != MoveType.CAP) {
+                    continue;
+                }
+
+                char prevFile = file;
+                int prevRank = pieceRank;
+
+                ReturnPiece removed = changeBoard(this, move, checkFile, checkRank, prevFile, prevRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, checkFile, checkRank, prevFile, prevRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+            }
+        }
+
+        return hasMove;
 
     }
 

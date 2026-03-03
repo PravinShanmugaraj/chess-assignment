@@ -1,3 +1,4 @@
+// Pravin Shanmugaraj, Aditya Jadhav
 package chess;
 
 import java.util.*;
@@ -23,6 +24,10 @@ public class Chess {
 
 	// list of pieces for ReturnPlay
 	static ArrayList<ReturnPiece> boardList = new ArrayList<ReturnPiece>();
+
+	// for determining check/checkmate
+	static ArrayList<ReturnPiece> whiteList = new ArrayList<ReturnPiece>();
+	static ArrayList<ReturnPiece> blackList = new ArrayList<ReturnPiece>();
 
 	// session board
 	// rows are 8 - rank
@@ -80,7 +85,6 @@ public class Chess {
 		if(getPiece(currFile, currRank) != null) {
 			currPiece = getPiece(currFile, currRank);
 		}else {
-			System.out.println("no piece in pos");
 			return returnPlay(Message.ILLEGAL_MOVE);
 		}
 
@@ -88,13 +92,11 @@ public class Chess {
 		switch(player) {
 			case Player.white -> {
 				if(!isWhite(currPiece)) {
-					System.out.println("wrong color (white)");
 					return returnPlay(Message.ILLEGAL_MOVE);
 				}
 			}
 			case Player.black -> {
 				if(!isBlack(currPiece)) {
-					System.out.println("wrong color (black)");
 					return returnPlay(Message.ILLEGAL_MOVE);
 				}
 			}
@@ -111,19 +113,9 @@ public class Chess {
 		}
 
 		// determine move type
-		MoveType toExec = switch(currPiece) {
-			case PawnPiece currPawn -> currPawn.checkMove(nextFile, nextRank, prmPiece);
-			case RookPiece currRook -> currRook.checkMove(nextFile, nextRank);
-			case KnightPiece currKnight -> currKnight.checkMove(nextFile, nextRank);
-			case BishopPiece currBishop -> currBishop.checkMove(nextFile, nextRank);
-			case QueenPiece currQueen -> currQueen.checkMove(nextFile, nextRank);
-			case KingPiece currKing -> currKing.checkMove(nextFile, nextRank);
-			// should never happen
-			default -> MoveType.NONE;
-		};
+		MoveType toExec = checkMove(currPiece, nextFile, nextRank, prmPiece);
 
 		if(toExec == MoveType.NONE) {
-			System.out.println("checkMove returned NONE");
 			return returnPlay(Message.ILLEGAL_MOVE);
 		}
 
@@ -153,6 +145,8 @@ public class Chess {
 
 		//reset board
 		boardList.clear();
+		whiteList.clear();
+		blackList.clear();
 		board = new ReturnPiece[8][8];
 
 		// create and add pieces to starting board
@@ -169,11 +163,17 @@ public class Chess {
 
 			// fill board and boardList
 			for(PieceFile pf : PieceFile.values()) {
-				ReturnPiece toAdd = addPiece(rank, pf);
+				ReturnPiece toAdd = addPiece(pf, rank);
 				boardList.add(toAdd);
 
 				char file = pf.name().charAt(0);
 				board[8 - rank][file - 'a'] = toAdd;
+
+				if(isWhite(toAdd)) {
+					whiteList.add(toAdd);
+				}else {
+					blackList.add(toAdd);
+				}
 
 				// maintain constant access to King pieces
 				if(toAdd instanceof KingPiece && isWhite(toAdd)) {
@@ -202,70 +202,21 @@ public class Chess {
 
 		// rook if CAST
 		RookPiece castleRook = null;
-		char prevRFile = '\0';
-		int prevRRank = -1;
+		char prevRookFile = '\0';
+		int prevRookRank = -1;
 
 		if(toExec == MoveType.CAST_KSIDE || toExec == MoveType.CAST_QSIDE) {
 			castleRook = (toExec == MoveType.CAST_KSIDE) ? (RookPiece) getPiece('h', nextRank) : (RookPiece) getPiece('a', nextRank);
-			prevRFile = castleRook.pieceFile.name().charAt(0);
-			prevRRank = castleRook.pieceRank;
+			prevRookFile = castleRook.pieceFile.name().charAt(0);
+			prevRookRank = castleRook.pieceRank;
 		}
 
-		// remove captured piece
-		if(toExec == MoveType.CAP) {
-			removed = getPiece(nextFile, nextRank);
-			board[8 - nextRank][nextFile - 'a'] = null;
-		}else if(toExec == MoveType.EP) {
-			switch(player) {
-				case white -> {
-					removed = getPiece(nextFile, nextRank - 1);
-					board[8 - (nextRank - 1)][nextFile - 'a'] = null;
-				}
-				case black -> {
-					removed = getPiece(nextFile, nextRank + 1);
-					board[8 - (nextRank + 1)][nextFile - 'a'] = null;
-				}
-			}
-		}
-
-		// move
-		board[8 - nextRank][nextFile - 'a'] = currPiece;
-		board[8 - prevRank][prevFile - 'a'] = null;
-
-		// move castling rook
-		if(toExec == MoveType.CAST_KSIDE) {
-			board[8 - prevRRank][(prevRFile - 2) - 'a'] = castleRook;
-			board[8 - prevRRank][prevRFile - 'a'] = null;
-		}else if(toExec == MoveType.CAST_QSIDE){
-			board[8 - prevRRank][(prevRFile + 3) - 'a'] = castleRook;
-			board[8 - prevRRank][prevRFile - 'a'] = null;
-		}
+		removed = changeBoard(currPiece, toExec, nextFile, nextRank, prevFile, prevRank, castleRook, prevRookFile, prevRookRank, prmPiece);
 
 		// check if move puts player in self check/checkmate
-		if(underAttack(currKing) != null) {
-			revertMove(currPiece, nextFile, nextRank, prevFile, prevRank, removed, castleRook, prevRFile, prevRRank);
-			System.out.println("under attack");
+		if(kingInCheck(currKing)) {
+			revertBoard(currPiece, nextFile, nextRank, prevFile, prevRank, removed, castleRook, prevRookFile, prevRookRank);
 			return Message.ILLEGAL_MOVE;
-		}
-
-		// confirm changes in boardList if move is legal
-		currPiece.pieceFile = PieceFile.valueOf(String.valueOf(nextFile));
-		currPiece.pieceRank = nextRank;
-
-		if(toExec == MoveType.CAP || toExec == MoveType.EP) {
-			boardList.remove(removed);
-		}
-		
-		if(toExec == MoveType.CAST_KSIDE) {
-			castleRook.pieceFile = PieceFile.valueOf(String.valueOf((char)(prevRFile - 2)));
-		}else if(toExec == MoveType.CAST_QSIDE){
-			castleRook.pieceFile = PieceFile.valueOf(String.valueOf((char)(prevRFile + 3)));
-		}
-
-		// promotion
-		if(toExec == MoveType.PROM) {
-			prmPiece = (prmPiece == null) ? "Q" : prmPiece;
-			promPiece(currPiece, nextFile, nextRank, prmPiece);
 		}
 
 		// track castling eligibility
@@ -276,41 +227,223 @@ public class Chess {
 		}
 
 		// check if opponent is in check/checkmate
-		return underAttack(oppKing);
+		return kingStatus(oppKing);
 	}
 
 	// revert move in case of illegal move
-	private static void revertMove(ReturnPiece currPiece, char currFile, int currRank, char prevFile, int prevRank, ReturnPiece removed,
-		RookPiece castleRook, char prevRFile, int prevRRank) {
+	static void revertBoard(ReturnPiece currPiece, char currFile, int currRank, char prevFile, int prevRank, ReturnPiece removed,
+		RookPiece castleRook, char prevRookFile, int prevRookRank) {
 
-		char currRFile = (castleRook != null) ? castleRook.pieceFile.name().charAt(0) : '\0';
-		int currRRank = (castleRook != null) ? castleRook.pieceRank : -1;
+		ReturnPiece promoted = getPiece(currFile, currRank);
+
+		char currRookFile = (castleRook != null) ? castleRook.pieceFile.name().charAt(0) : '\0';
+		int currRookRank = (castleRook != null) ? castleRook.pieceRank : -1;
 
 		board[8 - prevRank][prevFile - 'a'] = currPiece;
 		board[8 - currRank][currFile - 'a'] = null;
 
+		currPiece.pieceFile = PieceFile.valueOf(String.valueOf(prevFile));
+		currPiece.pieceRank = prevRank;
+
 		if(removed != null) {
 			board[8 - currRank][currFile - 'a'] = removed;
+			boardList.add(removed);
+			
+			if(isWhite(removed)) {
+				whiteList.add(removed);
+			}else {
+				blackList.add(removed);
+			}
 		}
 
 		if(castleRook != null) {
-			board[8 - prevRRank][prevRFile - 'a'] = castleRook;
-			board[8 - currRRank][currRFile - 'a'] = null;
+			board[8 - prevRookRank][prevRookFile - 'a'] = castleRook;
+			board[8 - currRookRank][currRookFile - 'a'] = null;
+			castleRook.pieceFile = PieceFile.valueOf(String.valueOf(prevRookFile));
 		}
+
+		if(promoted != currPiece) {
+			boardList.remove(promoted);
+			boardList.add(currPiece);
+		}
+
+	}
+
+	// make changes to board and boardList
+	static ReturnPiece changeBoard(ReturnPiece currPiece, MoveType toExec, char nextFile, int nextRank, char prevFile, int prevRank,
+		RookPiece castleRook, char prevRookFile, int prevRookRank, String prmPiece) {
+
+		ReturnPiece removed = null;
+
+		// remove captured piece
+		if(toExec == MoveType.CAP) {
+			removed = removePiece(nextFile, nextRank);
+		}else if(toExec == MoveType.EP) {
+			switch(player) {
+				case white -> {
+					removed = removePiece(nextFile, nextRank - 1);
+				}
+				case black -> {
+					removed = removePiece(nextFile, nextRank + 1);
+				}
+			}
+		}
+
+		// move
+		board[8 - nextRank][nextFile - 'a'] = currPiece;
+		board[8 - prevRank][prevFile - 'a'] = null;
+
+		currPiece.pieceFile = PieceFile.valueOf(String.valueOf(nextFile));
+		currPiece.pieceRank = nextRank;
+
+		// move castling rook
+		if(toExec == MoveType.CAST_KSIDE) {
+			board[8 - prevRookRank][(prevRookFile - 2) - 'a'] = castleRook;
+			board[8 - prevRookRank][prevRookFile - 'a'] = null;
+			castleRook.pieceFile = PieceFile.valueOf(String.valueOf((char)(prevRookFile - 2)));
+		}else if(toExec == MoveType.CAST_QSIDE){
+			board[8 - prevRookRank][(prevRookFile + 3) - 'a'] = castleRook;
+			board[8 - prevRookRank][prevRookFile - 'a'] = null;
+			castleRook.pieceFile = PieceFile.valueOf(String.valueOf((char)(prevRookFile + 3)));
+		}
+
+		// promotion
+		if(toExec == MoveType.PROM) {
+			prmPiece = (prmPiece == null) ? "Q" : prmPiece;
+			promPiece(currPiece, nextFile, nextRank, prmPiece);
+		}
+
+		return removed;
 
 	}
 
 	// determine if given king is under attack
-	private static Message underAttack(KingPiece currKing) {
-		
-		// placeholder
-		return null;
+	private static Message kingStatus(KingPiece currKing) {
+
+		if(!kingInCheck(currKing)) {
+			return null;
+		}
+
+		if(canDefend(currKing)) {
+			return Message.CHECK;
+		}
+
+		return (currKing == whiteKing) ? Message.CHECKMATE_BLACK_WINS : Message.CHECKMATE_WHITE_WINS;
+
+	}
+
+	// current king under attack
+	static boolean kingInCheck(KingPiece currKing) {
+
+		// simulate as attacking player
+		Player real = player;
+		player = (currKing == whiteKing) ? Player.black : Player.white;
+		ArrayList<ReturnPiece> oppList = (currKing == whiteKing) ? blackList : whiteList;
+
+		char kingFile = currKing.pieceFile.name().charAt(0);
+		int kingRank = currKing.pieceRank;
+
+		for(ReturnPiece rp : oppList) {
+			if(checkMove(rp, kingFile, kingRank, null) == MoveType.CAP) {
+				player = real;
+				return true;
+			}
+		}
+
+		player = real;
+		return false;
+
+	}
+
+	// player in check can make a move to get out of check
+	private static boolean canDefend(KingPiece currKing) {
+
+		ArrayList<ReturnPiece> currList = (currKing == whiteKing) ? whiteList : blackList;
+		ArrayList<ReturnPiece> stableCopy = new ArrayList<ReturnPiece>();
+
+		for(ReturnPiece rp : currList) {
+			stableCopy.add(rp);
+		}
+
+		// simulate as defending player
+		Player real = player;
+		player = (currKing == whiteKing) ? Player.white : Player.black;
+
+		for(ReturnPiece rp : stableCopy) {
+			if(hasLegalMove(rp, currKing)) {
+				player = real;
+				return true;
+			}
+		}
+
+		player = real;
+
+		return false;
+
+	}
+
+	// call appropriate hasLegalMove for piece type
+	private static boolean hasLegalMove(ReturnPiece currPiece, KingPiece currKing) {
+
+		switch(currPiece) {
+			case PawnPiece checkPawn -> {
+				return checkPawn.hasLegalMove(currKing);
+			}
+			case RookPiece checkRook -> {
+				return checkRook.hasLegalMove(currKing);
+			}
+			case KnightPiece checkKnight -> {
+				return checkKnight.hasLegalMove(currKing);
+			}
+			case BishopPiece checkBishop -> {
+				return checkBishop.hasLegalMove(currKing);
+			}
+			case QueenPiece checkQueen -> {
+				return checkQueen.hasLegalMove(currKing);
+			}
+			case KingPiece checkKing -> {
+				return checkKing.hasLegalMove();
+			}
+			// should never happen
+			default -> {
+				return false;
+			}
+		}
+
+	}
+
+	// call appropriate checkMove for piece type
+	private static MoveType checkMove(ReturnPiece currPiece, char nextFile, int nextRank, String prmPiece) {
+
+		switch(currPiece) {
+			case PawnPiece checkPawn -> {
+				return checkPawn.checkMove(nextFile, nextRank, prmPiece);
+			}
+			case RookPiece checkRook -> {
+				return checkRook.checkMove(nextFile, nextRank);
+			}
+			case KnightPiece checkKnight -> {
+				return checkKnight.checkMove(nextFile, nextRank);
+			}
+			case BishopPiece checkBishop -> {
+				return checkBishop.checkMove(nextFile, nextRank);
+			}
+			case QueenPiece checkQueen -> {
+				return checkQueen.checkMove(nextFile, nextRank);
+			}
+			case KingPiece checkKing -> {
+				return checkKing.checkMove(nextFile, nextRank);
+			}
+			// should never happen
+			default -> {
+				return MoveType.NONE;
+			}
+		}
+
 	}
 
 	// promote pawn to given piece
 	private static void promPiece(ReturnPiece currPawn, char pFile, int pRank, String prmPiece) {
-
-		int index = boardList.indexOf(currPawn);
 
 		// create new piece of correct type and replace pawn
 		switch(prmPiece) {
@@ -322,7 +455,8 @@ public class Chess {
 				newQ.pieceRank = currPawn.pieceRank;
 
 				board[8 - pRank][pFile - 'a'] = newQ;
-				boardList.set(index, newQ);
+				boardList.remove(currPawn);
+				boardList.add(newQ);
 			}
 			case "R" -> {
 				RookPiece newR = new RookPiece();
@@ -332,7 +466,8 @@ public class Chess {
 				newR.pieceRank = currPawn.pieceRank;
 
 				board[8 - pRank][pFile - 'a'] = newR;
-				boardList.set(index, newR);
+				boardList.remove(currPawn);
+				boardList.add(newR);
 			}
 			case "B" -> {
 				BishopPiece newB = new BishopPiece();
@@ -342,7 +477,8 @@ public class Chess {
 				newB.pieceRank = currPawn.pieceRank;
 
 				board[8 - pRank][pFile - 'a'] = newB;
-				boardList.set(index, newB);
+				boardList.remove(currPawn);
+				boardList.add(newB);
 			}
 			case "N" -> {
 				KnightPiece newN = new KnightPiece();
@@ -352,7 +488,8 @@ public class Chess {
 				newN.pieceRank = currPawn.pieceRank;
 
 				board[8 - pRank][pFile - 'a'] = newN;
-				boardList.set(index, newN);
+				boardList.remove(currPawn);
+				boardList.add(newN);
 			}
 		}
 
@@ -405,8 +542,34 @@ public class Chess {
 
 	}
 
+	// remove a piece from board, boardList, and whiteList/blackList
+	private static ReturnPiece removePiece(char file, int rank) {
+		ReturnPiece removed = getPiece(file, rank);
+		board[8 - rank][file - 'a'] = null;
+		boardList.remove(removed);
+
+		if(isWhite(removed)) {
+			whiteList.remove(removed);
+		}else {
+			blackList.remove(removed);
+		}
+
+		return removed;
+	}
+
+	// check if position is within board
+	static boolean inBounds(char file, int rank) {
+
+		if(file < 'a' || file > 'h' || rank < 1 || rank > 8) {
+			return false;
+		}
+
+		return true;
+
+	}
+
 	// creates a piece to be added based on its rank and file
-	private static ReturnPiece addPiece(int rank, PieceFile pf) {
+	private static ReturnPiece addPiece(PieceFile pf, int rank) {
 
 		ReturnPiece rp = null;
 
@@ -500,21 +663,6 @@ public class Chess {
 			default -> {
 				return null;
 			}
-		}
-	}
-
-	// debugging only
-	private static void printBoard() {
-		System.out.println();
-		for(int i = 0; i < board.length; i++) {
-			for(int j = 0; j < board[0].length; j++) {
-				if(board[i][j] != null) {
-					System.out.print(board[i][j].pieceType + "  ");
-				}else {
-					System.out.print("nl  ");
-				}
-			}
-			System.out.println();
 		}
 	}
 }

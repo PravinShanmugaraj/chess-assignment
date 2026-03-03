@@ -6,6 +6,10 @@ import static chess.Chess.getPiece;
 import static chess.Chess.isWhite;
 import static chess.Chess.isBlack;
 import static chess.Chess.player;
+import static chess.Chess.inBounds;
+import static chess.Chess.changeBoard;
+import static chess.Chess.revertBoard;
+import static chess.Chess.kingInCheck;
 
 public class RookPiece extends ReturnPiece {
 
@@ -17,27 +21,20 @@ public class RookPiece extends ReturnPiece {
 
         char file = pieceFile.name().charAt(0);
 
-        return checkStraight(file, pieceRank, nextFile, nextRank);
-
-    }
-
-    // static method to check for straight movement
-    // used by RookPiece and QueenPiece
-    public static MoveType checkStraight(char file, int rank, char nextFile, int nextRank) {
         // if move is current position then illegal
-        if(file == nextFile && rank == nextRank) {
+        if(file == nextFile && pieceRank == nextRank) {
             return MoveType.NONE;
         }
 
         // if not on a straight vector then illegal
-        if(file != nextFile && rank != nextRank) {
+        if(file != nextFile && pieceRank != nextRank) {
             return MoveType.NONE;
         }
 
         // peform line of sight based on vector
         if(file == nextFile) {
-            if(nextRank > rank) {
-                int checkRank = rank + 1;
+            if(nextRank > pieceRank) {
+                int checkRank = pieceRank + 1;
 
                 while(checkRank != nextRank) {
                     if(getPiece(file, checkRank) != null) {
@@ -46,7 +43,7 @@ public class RookPiece extends ReturnPiece {
                     checkRank++;
                 }
             }else {
-                int checkRank = rank - 1;
+                int checkRank = pieceRank - 1;
 
                 while(checkRank != nextRank) {
                     if(getPiece(file, checkRank) != null) {
@@ -60,7 +57,7 @@ public class RookPiece extends ReturnPiece {
                 char checkFile = (char) (file + 1);
 
                 while(checkFile != nextFile) {
-                    if(getPiece(checkFile, rank) != null) {
+                    if(getPiece(checkFile, pieceRank) != null) {
                         return MoveType.NONE;
                     }
                     checkFile++;
@@ -69,7 +66,7 @@ public class RookPiece extends ReturnPiece {
                 char checkFile = (char) (file - 1);
 
                 while(checkFile != nextFile) {
-                    if(getPiece(checkFile, rank) != null) {
+                    if(getPiece(checkFile, pieceRank) != null) {
                         return MoveType.NONE;
                     }
                     checkFile--;
@@ -95,6 +92,82 @@ public class RookPiece extends ReturnPiece {
 
         // should never happen
         return MoveType.NONE;
+
+    }
+
+    // simulates legal moves and determines king safety
+    public boolean hasLegalMove(KingPiece currKing) {
+
+        boolean hasMove = false;
+
+        char file = pieceFile.name().charAt(0);
+
+        for(int fileDir = -1; fileDir <= 1; fileDir += 2) {
+
+            char checkFile = (char) (file + fileDir);
+
+            while(inBounds(checkFile, pieceRank)) {
+
+                MoveType move = checkMove(checkFile, pieceRank);
+
+                if(move == MoveType.NONE) {
+                    break;
+                }
+
+                char prevFile = file;
+                
+                ReturnPiece removed = changeBoard(this, move, checkFile, pieceRank, prevFile, pieceRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, checkFile, pieceRank, prevFile, pieceRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+                checkFile = (char) (checkFile + fileDir);
+
+            }
+
+        }
+
+        for(int rankDir = -1; rankDir <= 1; rankDir += 2) {
+
+            int checkRank = pieceRank + rankDir;
+
+            while(inBounds(file, checkRank)) {
+
+                MoveType move = checkMove(file, checkRank);
+
+                if(move == MoveType.NONE) {
+                    break;
+                }
+
+                int prevRank = pieceRank;
+                
+                ReturnPiece removed = changeBoard(this, move, file, checkRank, file, prevRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, file, checkRank, file, prevRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+                checkRank = checkRank + rankDir;
+
+            }
+
+        }
+
+        return hasMove;
+
     }
 
 }
