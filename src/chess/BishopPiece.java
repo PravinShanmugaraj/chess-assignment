@@ -6,6 +6,10 @@ import static chess.Chess.getPiece;
 import static chess.Chess.isWhite;
 import static chess.Chess.isBlack;
 import static chess.Chess.player;
+import static chess.Chess.inBounds;
+import static chess.Chess.changeBoard;
+import static chess.Chess.revertBoard;
+import static chess.Chess.kingInCheck;
 
 public class BishopPiece extends ReturnPiece {
 
@@ -15,20 +19,14 @@ public class BishopPiece extends ReturnPiece {
 
         char file = pieceFile.name().charAt(0);
 
-        return checkDiagonal(file, pieceRank, nextFile, nextRank);
-    }
-
-    // static method to check for diagonal movement
-    // used by BishopPiece and QueenPiece
-    public static MoveType checkDiagonal(char file, int rank, char nextFile, int nextRank) {
         // if target is current then illegal
-        if(file == nextFile && rank == nextRank) {
+        if(file == nextFile && pieceRank == nextRank) {
             return MoveType.NONE;
         }
 
         // change in file and rank
         double deltaFile = Math.abs(nextFile - file);
-        double deltaRank = Math.abs(nextRank - rank);
+        double deltaRank = Math.abs(nextRank - pieceRank);
 
         // must be on diagonal vector
         if(deltaRank == 0 || deltaFile/deltaRank != 1) {
@@ -37,9 +35,9 @@ public class BishopPiece extends ReturnPiece {
 
         // depending on which vector the target is on, perform line of sight check
         if(nextFile > file) {
-            if(nextRank > rank) {
+            if(nextRank > pieceRank) {
                 char checkFile = (char) (file + 1);
-                int checkRank = rank + 1;
+                int checkRank = pieceRank + 1;
 
                 while(checkFile != nextFile && checkRank != nextRank) {
                     if(getPiece(checkFile, checkRank) != null) {
@@ -50,7 +48,7 @@ public class BishopPiece extends ReturnPiece {
                 }
             }else {
                 char checkFile = (char) (file + 1);
-                int checkRank = rank - 1;
+                int checkRank = pieceRank - 1;
 
                 while(checkFile != nextFile && checkRank != nextRank) {
                     if(getPiece(checkFile, checkRank) != null) {
@@ -61,9 +59,9 @@ public class BishopPiece extends ReturnPiece {
                 }
             }
         }else {
-            if(nextRank > rank) {
+            if(nextRank > pieceRank) {
                 char checkFile = (char) (file - 1);
-                int checkRank = rank + 1;
+                int checkRank = pieceRank + 1;
 
                 while(checkFile != nextFile && checkRank != nextRank) {
                     if(getPiece(checkFile, checkRank) != null) {
@@ -74,7 +72,7 @@ public class BishopPiece extends ReturnPiece {
                 }
             }else {
                 char checkFile = (char) (file - 1);
-                int checkRank = rank - 1;
+                int checkRank = pieceRank - 1;
 
                 while(checkFile != nextFile && checkRank != nextRank) {
                     if(getPiece(checkFile, checkRank) != null) {
@@ -104,6 +102,53 @@ public class BishopPiece extends ReturnPiece {
 
         // should never happen
         return MoveType.NONE;
+    }
+
+    public boolean hasLegalMove(KingPiece currKing) {
+
+        boolean hasMove = false;
+
+        char file = pieceFile.name().charAt(0);
+
+        for(int fileDir = -1; fileDir <= 1; fileDir += 2) {
+            for(int rankDir = -1; rankDir <= 1; rankDir += 2) {
+
+                char checkFile = (char) (file + fileDir);
+                int checkRank = pieceRank + rankDir;
+
+                while(inBounds(checkFile, checkRank)) {
+
+                    MoveType move = checkMove(checkFile, checkRank);
+
+                    if(move == MoveType.NONE) {
+                        break;
+                    }
+
+                    char prevFile = file;
+                    int prevRank = pieceRank;
+
+                    ReturnPiece removed = changeBoard(this, move, checkFile, checkRank, prevFile, prevRank, null, '\0', -1, null);
+
+                    if(!kingInCheck(currKing)) {
+                        hasMove = true;
+                    }
+
+                    revertBoard(this, checkFile, checkRank, prevFile, prevRank, removed, null, '\0', -1);
+
+                    if(hasMove) {
+                        return hasMove;
+                    }
+
+                    checkFile = (char) (checkFile + fileDir);
+                    checkRank = checkRank + rankDir;
+
+                }
+
+            }
+        }
+
+        return hasMove;
+
     }
 
 }

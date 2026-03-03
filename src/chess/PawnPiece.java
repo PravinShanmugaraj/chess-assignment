@@ -10,6 +10,10 @@ import static chess.Chess.player;
 import static chess.Chess.enpassTarget;
 import static chess.Chess.enpassFile;
 import static chess.Chess.enpassRank;
+import static chess.Chess.inBounds;
+import static chess.Chess.changeBoard;
+import static chess.Chess.revertBoard;
+import static chess.Chess.kingInCheck;
 
 public class PawnPiece extends ReturnPiece {
 
@@ -34,7 +38,7 @@ public class PawnPiece extends ReturnPiece {
         int promRank = (player == Player.white) ? 8 : 1;
 
         // OPEN
-        if(file == nextFile && pieceRank == startRank && nextRank == openRank) {
+        if(file == nextFile && pieceRank == startRank && nextRank == openRank && prmPiece == null) {
             if(getPiece(nextFile, nextRank) == null) {
                 enpassTarget = player;
                 enpassFile = nextFile;
@@ -92,6 +96,106 @@ public class PawnPiece extends ReturnPiece {
 
         // should never happen
         return MoveType.NONE;
+
+    }
+
+    // simulates legal moves and determines king safety
+    public boolean hasLegalMove(KingPiece currKing) {
+
+        boolean hasMove = false;
+
+        char file = pieceFile.name().charAt(0);
+
+        int deltaRank = (player == Player.white) ? 1 : -1;
+
+        int checkRank = pieceRank + deltaRank;
+
+        if(inBounds(file, checkRank)) {
+            
+            MoveType move = checkMove(file, checkRank, null);
+
+            if(move == MoveType.MOVE || move == MoveType.PROM) {
+
+                char prevFile = file;
+                int prevRank = pieceRank;
+
+                ReturnPiece removed = changeBoard(this, move, file, checkRank, prevFile, prevRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, file, checkRank, prevFile, prevRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+            }
+
+        }
+
+        checkRank += deltaRank;
+
+        if(inBounds(file, checkRank)) {
+            
+            MoveType move = checkMove(file, checkRank, null);
+
+            if(move == MoveType.OPEN) {
+
+                char prevFile = file;
+                int prevRank = pieceRank;
+
+                ReturnPiece removed = changeBoard(this, move, file, checkRank, prevFile, prevRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, file, checkRank, prevFile, prevRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+            }
+
+        }
+
+        checkRank -= deltaRank;
+
+        for(int deltaFile = -1; deltaFile <= 1; deltaFile += 2) {
+
+            char checkFile = (char) (file + deltaFile);
+
+            if(!inBounds(checkFile, checkRank)) {
+                continue;
+            }
+
+            MoveType move = checkMove(checkFile, checkRank, null);
+
+            if(move == MoveType.CAP || move == MoveType.EP) {
+
+                char prevFile = file;
+                int prevRank = pieceRank;
+
+                ReturnPiece removed = changeBoard(this, move, file, checkRank, prevFile, prevRank, null, '\0', -1, null);
+
+                if(!kingInCheck(currKing)) {
+                    hasMove = true;
+                }
+
+                revertBoard(this, file, checkRank, prevFile, prevRank, removed, null, '\0', -1);
+
+                if(hasMove) {
+                    return hasMove;
+                }
+
+            }
+
+        }
+
+        return hasMove;
 
     }
 
