@@ -38,7 +38,7 @@ public class PawnPiece extends ReturnPiece {
         int promRank = (player == Player.white) ? 8 : 1;
 
         // OPEN
-        if(file == nextFile && pieceRank == startRank && nextRank == openRank) {
+        if(file == nextFile && pieceRank == startRank && nextRank == openRank && prmPiece == null) {
             if(getPiece(nextFile, nextRank) == null) {
                 enpassTarget = player;
                 enpassFile = nextFile;
